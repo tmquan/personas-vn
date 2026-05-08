@@ -1,0 +1,347 @@
+# personas-vn ontology — schema config.
+#
+# Three layers:
+#
+#   1. NSO PX-Web databases (`pxweb_databases`) — the 12 first-class
+#      statistical databases NSO publishes at https://pxweb.nso.gov.vn/.
+#      Each database has a stable Vietnamese name (the canonical
+#      catalogue label), an English mirror (from the website's EN nav),
+#      a single-letter NSO matrix prefix (V01 .. V15), and the high-level
+#      access path (REST API or HTML form).
+#
+#   2. Statistical domains (`domains`) — language-neutral buckets that
+#      cluster databases for downstream UX. Often 1:1 with a PX-Web DB,
+#      but `national_accounts` and `banking` both live inside V03 and
+#      `prices` lives inside V08 alongside trade.
+#
+#   3. Persona dimensions (`persona_dimensions`) — the 11 categorical
+#      attributes that describe one synthetic Vietnamese persona, plus
+#      the directed-acyclic dependency edges the SDG-PGMs cascaded
+#      Bayesian network samples them through. Each dimension cites
+#      its source PX-Web table(s) so the provenance trail from a
+#      sampled persona attribute back to a real NSO matrix is one
+#      lookup away.
+
+# ---------------------------------------------------------------------------
+# Layer 1 — NSO PX-Web databases (12 first-class entities)
+# ---------------------------------------------------------------------------
+pxweb_databases:
+  - id: "geography"
+    name_vi: "Đơn vị hành chính, đất đai và khí hậu"
+    name_en: "Administrative Unit and Climate"
+    matrix_prefix: "V01"
+    access: "html_form"           # JSON API hides this DB; we drive the form
+    n_tables: 18
+    domain: "geography"
+
+  - id: "population_labour"
+    name_vi: "Dân số và lao động"
+    name_en: "Population and Employment"
+    matrix_prefix: "V02"
+    access: "json_api"
+    n_tables: 63
+    domains: ["population", "employment"]
+
+  - id: "national_accounts"
+    name_vi: "Tài khoản quốc gia"
+    name_en: "National Accounts and State budget"
+    matrix_prefix: "V03"
+    access: "html_form"
+    n_tables: 24
+    # V03 also contains banking / insurance / state budget tables
+    # (V03.13–V03.25) — modelled by attaching multiple domain ids.
+    domains: ["national_accounts", "banking"]
+
+  - id: "investment"
+    name_vi: "Đầu tư"
+    name_en: "Investment"
+    matrix_prefix: "V04"
+    access: "json_api"
+    n_tables: 25
+    domain: "investment"
+
+  - id: "enterprises"
+    name_vi: "Doanh nghiệp"
+    name_en: "Enterprise"
+    matrix_prefix: "V05"
+    access: "json_api"
+    n_tables: 56
+    domain: "enterprises"
+
+  - id: "agriculture"
+    name_vi: "Nông, lâm nghiệp và thủy sản"
+    name_en: "Agriculture, Forestry and Fishing"
+    matrix_prefix: "V06"
+    access: "html_form"
+    n_tables: 70
+    domain: "agriculture"
+
+  - id: "industry"
+    name_vi: "Công nghiệp"
+    name_en: "Industry"
+    matrix_prefix: "V07"
+    access: "json_api"
+    n_tables: 9
+    domain: "industry"
+
+  - id: "trade_prices"
+    name_vi: "Thương mại, giá cả"
+    name_en: "Trade, Price and Tourist"
+    matrix_prefix: "V08"
+    access: "html_form"
+    n_tables: 72
+    domains: ["trade", "prices", "tourism"]
+
+  - id: "transport_post"
+    name_vi: "Vận tải và bưu điện"
+    name_en: "Transport, Postal Services and Telecommunications"
+    matrix_prefix: "V12"
+    access: "html_form"
+    n_tables: 24
+    domain: "transport"
+
+  - id: "education"
+    name_vi: "Giáo dục"
+    name_en: "Education"
+    matrix_prefix: "V13"
+    access: "json_api"
+    n_tables: 34
+    domain: "education"
+
+  - id: "health_society"
+    name_vi: "Y tế, văn hóa và đời sống"
+    name_en: "Health, Culture, Sport and Living standard"
+    matrix_prefix: "V14"
+    access: "html_form"
+    n_tables: 97
+    # The largest topical DB — also covers Justice, Social order &
+    # safety, Environment, Living standards, Income & expenditure.
+    domains: ["health", "society", "environment", "justice", "living_standards"]
+
+  - id: "international"
+    name_vi: "Thống kê nước ngoài"
+    name_en: "International Statistics"
+    matrix_prefix: "V15"
+    access: "html_form"
+    n_tables: 10
+    domain: "international"
+
+
+# ---------------------------------------------------------------------------
+# Layer 2 — Statistical domains (language-neutral buckets)
+# ---------------------------------------------------------------------------
+domains:
+  - id: "geography"
+    label_en: "Administrative Units, Land & Climate"
+    label_vi: "Đơn vị hành chính, đất đai và khí hậu"
+    aliases:
+      - "administrative-unit-land-and-climate"
+      - "don-vi-hanh-chinh-dat-dai-va-khi-hau"
+      - "geography"
+
+  - id: "population"
+    label_en: "Population & Demographics"
+    label_vi: "Dân số"
+    aliases: ["dan-so", "population", "dân số", "demographics"]
+
+  - id: "employment"
+    label_en: "Employment & Labour"
+    label_vi: "Lao động & Việc làm"
+    aliases: ["employment", "lao-dong", "lao động", "viec-lam", "labour"]
+
+  - id: "national_accounts"
+    label_en: "National Accounts"
+    label_vi: "Tài khoản quốc gia"
+    aliases: ["national-accounts", "tai-khoan-quoc-gia", "gdp", "gdp-region"]
+
+  - id: "banking"
+    label_en: "Banking, Insurance & State Budget"
+    label_vi: "Ngân hàng, Bảo hiểm & Ngân sách"
+    aliases: ["banking-insurance-and-state-budget", "ngan-hang", "budget",
+               "insurance"]
+
+  - id: "investment"
+    label_en: "Investment & Construction"
+    label_vi: "Đầu tư & Xây dựng"
+    aliases: ["investment-and-construction", "dau-tu-va-xay-dung", "fdi"]
+
+  - id: "enterprises"
+    label_en: "Enterprises"
+    label_vi: "Doanh nghiệp"
+    aliases: ["enterprises", "doanh-nghiep", "doanh nghiệp"]
+
+  - id: "agriculture"
+    label_en: "Agriculture, Forestry & Fishery"
+    label_vi: "Nông, Lâm, Thuỷ sản"
+    aliases: ["agriculture-forestry-and-fishery", "nong-lam-thuy-san",
+               "nông", "lâm", "thủy sản"]
+
+  - id: "industry"
+    label_en: "Industry"
+    label_vi: "Công nghiệp"
+    aliases: ["industry", "cong-nghiep", "công nghiệp"]
+
+  - id: "trade"
+    label_en: "Trade & Commerce"
+    label_vi: "Thương mại"
+    aliases: ["trade", "thuong-mai", "thương mại", "retail"]
+
+  - id: "prices"
+    label_en: "Prices & CPI"
+    label_vi: "Giá cả"
+    aliases: ["prices", "gia-ca", "cpi", "consumer-price-index"]
+
+  - id: "tourism"
+    label_en: "Tourism"
+    label_vi: "Du lịch"
+    aliases: ["tourism", "du-lich", "tourist"]
+
+  - id: "transport"
+    label_en: "Transport, Postal Services & Telecommunications"
+    label_vi: "Vận tải, Bưu chính, Viễn thông"
+    aliases: ["transport", "van-tai", "buu-dien", "telecommunications", "post"]
+
+  - id: "education"
+    label_en: "Education & Science / Technology"
+    label_vi: "Giáo dục, Khoa học công nghệ"
+    aliases: ["education", "giao-duc", "giáo dục", "science",
+               "technology"]
+
+  - id: "health"
+    label_en: "Health & Healthcare"
+    label_vi: "Y tế"
+    aliases: ["health", "y-te", "healthcare", "medical"]
+
+  - id: "society"
+    label_en: "Society & Culture"
+    label_vi: "Xã hội, Văn hóa"
+    aliases: ["culture", "van-hoa", "social", "sport"]
+
+  - id: "living_standards"
+    label_en: "Living Standards & Household Welfare"
+    label_vi: "Mức sống dân cư"
+    aliases: ["living-standards", "muc-song", "income", "expenditure",
+               "poverty"]
+
+  - id: "justice"
+    label_en: "Justice, Social Order & Safety"
+    label_vi: "Tư pháp, Trật tự an toàn xã hội"
+    aliases: ["justice", "tu-phap", "safety", "law-enforcement"]
+
+  - id: "environment"
+    label_en: "Environment"
+    label_vi: "Môi trường"
+    aliases: ["environment", "moi-truong", "waste", "natural-disaster"]
+
+  - id: "international"
+    label_en: "International Statistics"
+    label_vi: "Thống kê nước ngoài"
+    aliases: ["international", "foreign", "thong-ke-nuoc-ngoai"]
+
+  - id: "other"
+    label_en: "Other"
+    label_vi: "Chủ đề khác"
+    aliases: ["chu-de-khac", "generic", "other"]
+
+
+# ---------------------------------------------------------------------------
+# Layer 3 — Persona dimensions (with PX-Web table provenance)
+# ---------------------------------------------------------------------------
+# Each dimension declares the PX-Web tables that ground its conditional
+# probability distribution. A persona's `sources` list is built from
+# this map at generation time.
+persona_dimensions:
+  # ----- Stage 1 — geography -----
+  - id: "region"
+    domain: "geography"
+    parents: []
+    cardinality: 6
+    sources:
+      - "V02.01"   # Area, population and density by province
+      - "V01.01"   # Administrative units by province (sanity check)
+
+  - id: "urbanicity"
+    domain: "geography"
+    parents: ["region"]
+    cardinality: 2
+    sources:
+      - "V02.02"   # Average population by sex and by residence
+      - "V02.03-07"  # Avg population by province × sex × residence
+
+  # ----- Stage 2 — demographics -----
+  - id: "age_group"
+    domain: "population"
+    parents: ["region"]
+    cardinality: 11           # 5-year buckets 15-19 ... 60-64 + 65+
+    sources:
+      - "V02.41"   # Employed persons by age group
+      - "V02.36"   # Labour force by age group (3-bucket fallback)
+
+  - id: "sex"
+    domain: "population"
+    parents: ["age_group"]
+    cardinality: 2
+    sources:
+      - "V02.02"   # Average population by sex × residence
+
+  - id: "ethnicity"
+    domain: "population"
+    parents: ["region"]
+    cardinality: 7
+    sources: []   # NSO PX-Web doesn't publish ethnicity-by-region; we
+                  # use the 2019 Population & Housing Census shape from
+                  # `distributions_pxweb.py`
+
+  - id: "marital_status"
+    domain: "population"
+    parents: ["age_group", "sex"]
+    cardinality: 4
+    sources:
+      - "V02.28"   # Number of marriages by province (proxy)
+      - "V02.29"   # Singulate mean age at marriage by sex × residence
+
+  # ----- Stage 3 — socio-economic -----
+  - id: "education_level"
+    domain: "education"
+    parents: ["age_group", "urbanicity"]
+    cardinality: 5
+    sources:
+      - "V02.54"   # Trained labour by qualification level
+      - "V13.06"   # Education-system enrolment counts (corroboration)
+
+  - id: "employment_status"
+    domain: "employment"
+    parents: ["age_group", "sex"]
+    cardinality: 5
+    sources:
+      - "V02.44"   # Employed by status in employment
+      - "V02.39"   # Employed by sex × residence (rate context)
+
+  - id: "occupation"
+    domain: "employment"
+    parents: ["education_level"]
+    cardinality: 10           # 10-class ISCO collapse
+    sources:
+      - "V02.43"   # Employed by occupation
+
+  - id: "industry_sector"
+    domain: "industry"
+    parents: ["occupation"]
+    cardinality: 21           # ISIC sectors NSO publishes
+    sources:
+      - "V02.42"   # Employed by sector (kinds of economic activity)
+
+  - id: "income_quintile"
+    domain: "living_standards"
+    parents: ["education_level"]
+    cardinality: 5
+    sources: []   # NSO HLSS quintiles aren't in PX-Web; synthetic prior
+                  # in `distributions_pxweb.py:_INCOME_BY_EDUCATION`
+
+# ---------------------------------------------------------------------------
+# Output knobs for the visualizer + generator.
+# ---------------------------------------------------------------------------
+output:
+  personas_dir: "data/personas"
+  default_n_personas: 200
+  random_seed: 20260505

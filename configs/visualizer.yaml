@@ -1,0 +1,20 @@
+# Gradio visualizer configuration.
+
+server:
+  host: "127.0.0.1"
+  port: 7860
+  share: false               # set true to expose a *.gradio.live tunnel
+  show_api: false
+
+ui:
+  title: "Personas-VN — NSO Data, Ontology & Synthetic Personas"
+  theme: "soft"              # one of: default, soft, monochrome, glass
+  table_page_size: 25
+  graph_max_nodes: 80        # cap for the ontology graph view
+  default_n_personas: 200    # what the "Generate" button defaults to
+
+paths:
+  ontology_config: "configs/ontology.yaml"
+  ontology_data: "data/ontology"
+  personas_data: "data/personas"
+  fixtures_dir: "data/fixtures"

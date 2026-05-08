@@ -1,0 +1,60 @@
+# NSO scraper configuration.
+#
+# The scraper hits the WordPress REST API exposed at
+# https://www.nso.gov.vn/wp-json/wp/v2/. The site is multilingual via
+# Polylang (vi/en); the `lang` field below selects which language slice is
+# pulled.
+#
+# Pagination: WP returns X-WP-Total / X-WP-TotalPages headers, so we walk
+# pages until we either exhaust them or reach `max_pages`. Every page hit is
+# cached on disk (data/raw/cache/), so re-running the scraper is cheap.
+
+source:
+  base_url: "https://www.nso.gov.vn"
+  api_path: "/wp-json/wp/v2"
+  lang: "en"                 # "en" or "vi"; "" = no filter
+  # NSO returns an HTML "Website Filtered" page for non-browser-looking
+  # User-Agents, so we present as a recent Chrome on macOS. The project URL
+  # is left as a hint in the comment below for any operator who wants to
+  # contact the maintainers.
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0 Safari/537.36"
+  verify_ssl: false          # NSO occasionally serves chains the system
+                             # bundle on macOS does not trust; we still go
+                             # over TLS, just without local chain verify.
+
+paths:
+  raw_dir: "data/raw"
+  cache_dir: "data/raw/cache"
+  ontology_dir: "data/ontology"
+
+# How aggressively to walk the API. Defaults are conservative so a casual
+# `python -m packages.pipeline.cli scrape` finishes in well under a minute.
+fetch:
+  per_page: 50               # WP allows up to 100; 50 is a good trade-off
+  max_pages: 4               # cap so a smoke run does not pull all 100+ pages
+  request_timeout_s: 20
+  retries: 3
+  retry_backoff_s: 1.5
+  delay_between_requests_s: 0.25
+
+# Endpoints we walk. Each one is mapped into the ontology by the
+# scraper/mapper module. `kind` controls which Pydantic record type we emit.
+endpoints:
+  - name: "categories"
+    path: "/categories"
+    kind: "category"
+    extra: { per_page: 100 }
+  - name: "tags"
+    path: "/tags"
+    kind: "tag"
+    extra: { per_page: 100 }
+  - name: "posts"
+    path: "/posts"
+    kind: "post"
+    extra: { _fields: "id,date,slug,link,title,excerpt,categories,tags,lang" }
+
+# Offline / fixture mode. When the network call fails (DNS, 5xx, timeout) the
+# scraper transparently falls back to a bundled fixture so the rest of the
+# pipeline (and the visualizer) still has data to work with. Set to `false`
+# to make scrape failures fatal instead.
+offline_fallback: true

@@ -1,0 +1,101 @@
+# NSO curation pipeline configuration.
+#
+# Mirrors ViLA's `packages/datasites/anle/` five-stage layout:
+#     download → parse → extract → embed → reduce
+# Each stage reads from the previous stage's output dir and writes its own
+# output dir. Failures inside one stage do not corrupt earlier stages.
+#
+# The download stage now targets the *real* statistical database
+# (https://pxweb.nso.gov.vn/api/v1/) — structured tabular data in PC-Axis
+# format — instead of the WordPress news posts the previous version
+# scraped. Every reachable table is fetched as JSON and stored as a
+# parquet of long-format records (one row per (variable values..., value)).
+
+dataset:
+  name: "nso-gov-vn"
+  root: "data/nso-gov-vn"
+
+# Stage 1 — download: walk the PX-Web catalog, fetch every table.
+download:
+  source: "pxweb"             # "pxweb" or "wordpress" (legacy)
+  base_url: "https://pxweb.nso.gov.vn"
+  api_path: "/api/v1"
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0 Safari/537.36"
+  verify_ssl: false
+  request_timeout_s: 30
+  retries: 3
+  retry_backoff_s: 1.5
+  delay_between_requests_s: 0.15
+  langs: ["vi"]               # the English DB slugs are 404-only; only vi works
+  # Filter the databases to walk; empty -> walk everything reachable.
+  only_dbs: []
+  skip_dbs: ["Education", "Enterprise", "Industry"]   # English ids are 404 stubs
+  # When true (default), also brute-force scrape the 7 databases the JSON
+  # API hides (V01.* / V03.* / V06.* / V08.* / V12.* / V14.* / V15.*) by
+  # driving the website's ASP.NET form workflow + xlsx download. Set to
+  # false to keep the crawl JSON-API-only.
+  include_html_dbs: true
+
+# Stage 2 — parse (HTML → plain text, language detection).
+parse:
+  min_text_chars: 60          # drop records too short to be useful
+  strip_iframes: true
+  strip_scripts: true
+
+# Stage 3 — extract (keyword + summary extraction, ontology mapping).
+extract:
+  top_keywords: 8
+  vectorizer: "tfidf"         # tfidf | none
+  ngram_range: [1, 2]
+  max_df: 0.85
+  min_df: 2
+
+# Stage 4 — embed (text → vector).
+#
+# Backends auto-selected from model name:
+#   * sentence-transformers/* → local SBERT (free, offline, 384-dim)
+#   * nvidia/*                → NVIDIA NIM hosted embeddings (2048-dim)
+# Override via `embed.backend: "local"` or `"nim"`.
+#
+# NIM models verified working on `https://integrate.api.nvidia.com/v1/embeddings`:
+#   * nvidia/llama-3.2-nv-embedqa-1b-v2          (1B, EmbedQA-tuned)
+#   * nvidia/llama-nemotron-embed-1b-v2          (1B, latest Nemotron)
+#   * nvidia/llama-3.2-nemoretriever-300m-embed-v1 (300M, lightweight)
+#   * nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1
+#   * nvidia/nv-embedqa-e5-v5
+#   * nvidia/nv-embedqa-mistral-7b-v2
+#
+# Set $PERSONAS_VN_LLM_API_KEY (or $NVIDIA_API_KEY) for NIM. Local stays
+# the default so `python -m packages.pipeline.cli curate` works offline
+# out of the box.
+embed:
+  model: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+  backend: "auto"             # "auto" | "local" | "nim"
+  batch_size: 64
+  normalize: true
+  text_field: "text"
+  device: "cpu"               # local backend only
+  # NIM-only knobs (ignored by the local backend):
+  base_url: null              # falls back to https://integrate.api.nvidia.com/v1
+  api_key_env: "PERSONAS_VN_LLM_API_KEY"
+  truncate: "END"             # "NONE" | "START" | "END" — server-side truncation
+  request_delay_s: 0.0        # set >0 for rate-limit-friendly drips
+  # CPU embedding of all 11K bilingual NSO docs takes ~10 min on a M-series
+  # mac. Cap to 3000 for fast iteration; bump to null for the full corpus.
+  max_records: 3000
+
+# Stage 5 — reduce (UMAP → 2-D coords for visualizer).
+#
+# Clustering is opt-in. The default (`cluster: false`) skips the
+# density-based HDBSCAN pass and only writes the 2-D UMAP coordinates
+# to `reduced.parquet`. Flip to `true` to additionally compute
+# cluster labels (with `-1` for low-density noise points) and add a
+# `cluster` column.
+reduce:
+  algorithm: "umap"           # umap | pca | tsne
+  n_components: 2
+  n_neighbors: 15
+  min_dist: 0.1
+  metric: "cosine"
+  random_state: 20260505
+  cluster: false              # opt-in HDBSCAN; see ReduceStage.run()

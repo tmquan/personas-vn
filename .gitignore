@@ -1,3 +1,10 @@
+Nemotron Personas Vietnam v*
+# personas-vn generated artefacts (large; produced by `make curate` /
+# `make generate` / `make embed-personas` / `make analyze`).
+data/
+docs/figures/
+.mpl-cache/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
